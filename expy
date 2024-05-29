@@ -1,0 +1,37 @@
+from flask import Flask, request, render_template_string
+import requests
+from bs4 import BeautifulSoup
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return '''
+        <form action="/search" method="post">
+            <input type="text" name="query" placeholder="검색어를 입력하세요">
+            <input type="submit" value="검색">
+        </form>
+    '''
+
+@app.route('/search', methods=['POST'])
+def search():
+    query = request.form['query']
+    url = f"https://search.naver.com/search.naver?query={query}"
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'}
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, 'html.parser')
+        results = soup.find_all(class_='ouxiq')
+        output = ''.join([str(result) for result in results])
+    else:
+        output = '검색 결과를 불러오는 데 실패했습니다.'
+    
+    return render_template_string('''
+        <h1>검색 결과</h1>
+        <div>{{ results|safe }}</div>
+        <a href="/">다시 검색</a>
+    ''', results=output)
+
+if __name__ == '__main__':
+    app.run(debug=True)
